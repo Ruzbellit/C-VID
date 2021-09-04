@@ -1,34 +1,57 @@
 #lang eopl
 
-;Especificacion Lexica
+;******************************************************************************************
+;;;;; Interpretador para lenguaje con condicionales, ligadura local y procedimientos
 
-(define lexica
+;; La definición BNF para las expresiones del lenguaje:
+;;
+;;  <program>       ::= <expression>
+;;                      <a-program (exp)>
+;;  <expression>    ::= <integer>
+;;                      <int-exp (datum)>
+;;                  ::= <identifier>
+;;                      <var-exp (id)>
+;;                  ::= <primitive> ({<expression>}*(,))
+;;                      <primapp-exp (prim rands)>
+;;                  ::= if <expresion> then <expresion> else <expression>
+;;                      <if-exp (exp1 exp2 exp23)>
+;;                  ::= let {identifier = <expression>}* in <expression>
+;;                      <let-exp (ids rands body)>
+;;                  ::= proc({<identificador>}*(,)) <expression>
+;;                      <proc-exp (ids body)>
+;;                  ::= (<expression> {<expression>}*)
+;;                      <app-exp proc rands>
+;;  <primitive>     ::= + | - | * | add1 | sub1 
+
+;******************************************************************************************
+
+;Especificación Léxica
+
+(define scanner-spec-simple-interpreter
 '((white-sp
    (whitespace) skip)
   (comment
    ("%" (arbno (not #\newline))) skip)
   (identifier
    (letter (arbno (or letter digit "?"))) symbol)
-  (number
+  (integer
    (digit (arbno digit)) number)
-  (number
+  (integer
    ("-" digit (arbno digit)) number)
   (float
    (digit (arbno digit) "," digit (arbno digit)) float)
   (float
-   ("-" digit (arbno digit) "," digit (arbno digit)) float)
-  )
-  )
+   ("-" digit (arbno digit) "," digit (arbno digit)) float)))
 
-;Especificacion Sintactica(Gramatica)
+;Especificación Sintáctica (gramática)
 
-(define gramatica
+(define grammar-simple-interpreter
   '((program (global_def expression) C-VID_program)
-    
-    (expression (number) numb)
-    (expression (float) float)
-    (expression ("#\'" letter "#\'") char)
-    (expression ("#\"" identifier "#\"") string)
+
+    ;;Datos
+    (expression (integer) int-exp)
+    (expression (float) float-exp)
+    (expression (identifier) var-exp)
     (expression (or (eqv? identifier "true") (eqv? identifier "false")) bool)
 
     ;;Constructores de Datos Predefinidos
@@ -55,11 +78,11 @@
     (neg-bool ("not") neg_bool)
 
     ;;Definiciones
-    (expression ("var" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in") var_def)
-    (expression ("cons" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in") cons_def)
-    (expression ("rec" "(" identifier "=" expression(arbno "," identifier "=" expression) ")" "in") rec_def)
-    (expression ("global" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in") global_def)
-    (expression ("unic" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in") unic_def)
+    (expression ("global" "(" identifier "=" expression (arbno "," identifier "=" expression) ")") global_def)
+    (expression ("var" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in" expression) var_def)
+    (expression ("cons" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in" expression) cons_def)
+    (expression ("rec" "(" identifier "=" expression(arbno "," identifier "=" expression) ")" "in" expression) rec_def)
+    (expression ("unic" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in" expression) unic_def)
 
     ;;Estructuras de Control
     (expression ("sequence" expression (arbno ";" expression)) exp_seq)
