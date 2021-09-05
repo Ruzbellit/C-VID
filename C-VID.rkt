@@ -112,18 +112,22 @@
     (bool-neg ("NOT") neg-op)
 
     ;;Definiciones
-    (expression ("global" "(" identifier "=" expression (arbno "," identifier "=" expression) ")") global_def)
-    (expression ("var" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in" expression) var_def)
-    (expression ("cons" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in" expression) cons_def)
-    (expression ("rec" "(" identifier "=" expression(arbno "," identifier "=" expression) ")" "in" expression) rec_def)
-    (expression ("unic" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in" expression) unic_def)
+    (expression ("global" "(" identifier "=" expression (arbno "," identifier "=" expression) ")") global-def)
+    (expression ("var" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in" expression) var-def)
+    (expression ("cons" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in" expression) cons-def)
+    (expression ("rec" "(" identifier "=" expression(arbno "," identifier "=" expression) ")" "in" expression) rec-def)
+    (expression ("unic" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in" expression) unic-def)
 
     ;;Estructuras de Control
-;    (expression ("sequence" expression (arbno ";" expression)) exp_seq)
-;    (expression ("if" exp_expression_bool "then" expression "else" expression) exp_if)
-;    (expression ("cond" "{" "[" expression expression "]" (arbno ";" "[" expression expression "]")) exp_cond)
-;    (expression ("while" expression_bool "do" expression) exp_while)
-;    (expression ("for" identifier "=" expression "do" expression))
+    (expression ("sequence" expression (arbno ";" expression) "end") seq-exp)
+    (expression ("if" exp-bool "then" expression "else" expression "end") if-exp)
+    (expression ("cond" "[" expression expression "]" (arbno ";" "[" expression expression "]") "else" expression) cond-exp)
+    (expression ("while" exp-bool "do" expression "done") while-exp)
+    (expression ("for" identifier "=" expression for-type expression "do" expression "done") for-exp)
+
+    (for-type ("to") for-to)
+    (for-type ("downto") for-downto)
+
     )
   )
 
@@ -160,3 +164,7 @@
 (scan&parse "true")
 (scan&parse "false")
 (scan&parse "AND (true, false)")
+(scan&parse "compare(5>2)")
+
+(scan&parse "sequence 123; 'R'; -5; true end")
+(scan&parse "if compare(5>2) then 10 else 0 end")
