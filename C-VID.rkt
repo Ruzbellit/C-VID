@@ -6,11 +6,27 @@
 ;; La definición BNF para las expresiones del lenguaje:
 ;;
 ;;  <program>       ::= <expression>
-;;                      <a-program (exp)>
-;;  <expression>    ::= <integer>
+;;                      <c-vid-program (exp)>
+;;  <expression>    ::= <int>
 ;;                      <int-exp (datum)>
+;;                  ::= <float>
+;;                      <float-exp (datum)>
 ;;                  ::= <identifier>
 ;;                      <var-exp (id)>
+;;                  ::= <char>
+;;                      <char-exp (datum)>
+;;                  ::= <string>
+;;                      <string-exp (datum)>
+;;                  ::= <exp-bool>
+;;                      <bool-exp (datum)>
+;;
+;;                  ::= <list>
+;;                      ({<expression>}*(,))
+;;                  ::= <vector>
+;;                      [{<expression>}*(,)]
+;;                  ::= <record>
+;;                      [{<expression>}*(,)]
+;;
 ;;                  ::= <primitive> ({<expression>}*(,))
 ;;                      <primapp-exp (prim rands)>
 ;;                  ::= if <expresion> then <expresion> else <expression>
@@ -21,7 +37,16 @@
 ;;                      <proc-exp (ids body)>
 ;;                  ::= (<expression> {<expression>}*)
 ;;                      <app-exp proc rands>
-;;  <primitive>     ::= + | - | * | add1 | sub1 
+;;  <primitive-op>  ::= + | - | * | / | > | >= | < | <= | == | <>
+;;  <exp-bool>      ::= <bool>
+;;                  ::= <compare-exp>
+;;                      compare(<expression> <primitive-op> <expression>)
+;;                  ::= <bin-bool-exp>
+;;                      <bool-op> (<exp-bool>, <exp-bool>)
+;;                  ::= <neg-bool-exp>
+;;                      <neg-bool> <exp-bool>
+;;  <bool-op>       ::= AND | OR | XOR 
+;;  <bool-neg>      ::= NOT
 
 ;******************************************************************************************
 
@@ -34,48 +59,57 @@
    ("%" (arbno (not #\newline))) skip)
   (identifier
    (letter (arbno (or letter digit "?"))) symbol)
-  (integer
+  (int
    (digit (arbno digit)) number)
-  (integer
+  (int
    ("-" digit (arbno digit)) number)
   (float
-   (digit (arbno digit) "," digit (arbno digit)) float)
+   (digit (arbno digit) "." digit (arbno digit)) number)
   (float
-   ("-" digit (arbno digit) "," digit (arbno digit)) float)))
+   ("-" digit (arbno digit) "." digit (arbno digit)) number)
+  (char
+   ("'" letter "'") string)
+  (str
+   ("\"" (arbno any) "\"") string)
+  (bool
+   ((or "true" "false")) string)
+  ))
 
 ;Especificación Sintáctica (gramática)
 
 (define grammar-simple-interpreter
-  '((program (global_def expression) C-VID_program)
+  '((program (expression) c-vid-program)
 
-    ;;Datos
-    (expression (integer) int-exp)
-    (expression (float) float-exp)
     (expression (identifier) var-exp)
-    (expression (or (eqv? identifier "true") (eqv? identifier "false")) bool)
+    
+    ;;Datos
+    (expression (int) int-exp)
+    (expression (float) float-exp)
+    (expression (char) char-exp)
+    (expression (str) string-exp)
+    (expression (exp-bool) bool-exp)
+;    (expression (bool) bool-exp)
 
     ;;Constructores de Datos Predefinidos
-    (expression ("(" expression (arbno "," expression) ")") exp_list)
-    (expression ("[" expression (arbno "," expression ) "]") exp_vector)
-    (expression ("{" expression (arbno ";" expression) "}") exp_record)
-    
-    (expression_bool (expression prim-bool expression) exp_bool_prim)
-    (expression_bool (oper-bool expression_bool expression_bool) exp_bool_oper)
-    (expression_bool (bool) exp_bool)
-    (expression_bool (neg_bool expression_bool) exp_bool_neg)
+    (expression ("(" expression (arbno "," expression) ")") list-exp)
+    (expression ("[" expression (arbno "," expression ) "]") vector-exp)
+    (expression ("{" identifier "=" expression (arbno ";" identifier "=" expression) "}") record-exp)
 
-    (prim-bool ("<") less_oper?)
-    (prim-bool (">") greater_oper?)
-    (prim-bool ("<=") less_equal_oper?)
-    (prim-bool (">=") greater_equal?)
-    (prim-bool ("==") equal?)
-    (prim-bool ("<>") not_equal?)
+    (exp-bool (bool) bool-val)
+    (exp-bool ("compare(" expression primitive-op expression ")") compare-exp)
+    (exp-bool (bool-op "(" exp-bool "," exp-bool ")") bin-bool-exp)
+    (exp-bool (bool-neg exp-bool) neg-bool-exp)
 
-    (oper-bool ("and") and_oper)
-    (oper-bool ("or") or_oper)
-    (oper-bool ("xor") xor_oper)
-
-    (neg-bool ("not") neg_bool)
+    (primitive-op ("<") less_than-op)
+    (primitive-op (">") greater_than-op)
+    (primitive-op ("<=") less_equal-op)
+    (primitive-op (">=") greater_equal-op)
+    (primitive-op ("==") equal)
+    (primitive-op ("<>") not_equal)
+    (bool-op ("AND") and-op)
+    (bool-op ("OR") and-op)
+    (bool-op ("XOR") and-op)
+    (bool-neg ("NOT") neg-op)
 
     ;;Definiciones
     (expression ("global" "(" identifier "=" expression (arbno "," identifier "=" expression) ")") global_def)
@@ -85,10 +119,44 @@
     (expression ("unic" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in" expression) unic_def)
 
     ;;Estructuras de Control
-    (expression ("sequence" expression (arbno ";" expression)) exp_seq)
-    (expression ("if" exp_expression_bool "then" expression "else" expression) exp_if)
-    (expression ("cond" "{" "[" expression expression "]" (arbno ";" "[" expression expression "]")) exp_cond)
-    (expression ("while" expression_bool "do" expression) exp_while)
-    (expression ("for" identifier "=" expression "do" expression))
+;    (expression ("sequence" expression (arbno ";" expression)) exp_seq)
+;    (expression ("if" exp_expression_bool "then" expression "else" expression) exp_if)
+;    (expression ("cond" "{" "[" expression expression "]" (arbno ";" "[" expression expression "]")) exp_cond)
+;    (expression ("while" expression_bool "do" expression) exp_while)
+;    (expression ("for" identifier "=" expression "do" expression))
     )
   )
+
+
+;Construidos automáticamente:
+
+(sllgen:make-define-datatypes scanner-spec-simple-interpreter grammar-simple-interpreter)
+
+(define show-the-datatypes
+  (lambda () (sllgen:list-define-datatypes scanner-spec-simple-interpreter grammar-simple-interpreter)))
+
+;*******************************************************************************************
+;Parser, Scanner, Interfaz
+
+;El FrontEnd (Análisis léxico (scanner) y sintáctico (parser) integrados)
+
+(define scan&parse
+  (sllgen:make-string-parser scanner-spec-simple-interpreter grammar-simple-interpreter))
+
+;El Analizador Léxico (Scanner)
+
+(define just-scan
+  (sllgen:make-string-scanner scanner-spec-simple-interpreter grammar-simple-interpreter))
+
+
+;;PRUEBAS
+(scan&parse "0")
+(scan&parse "1")
+(scan&parse "-1")
+(scan&parse "3.14")
+(scan&parse "-1.5")
+(scan&parse "'R'")
+(scan&parse "\"hola mundo 7\"")
+(scan&parse "true")
+(scan&parse "false")
+(scan&parse "AND (true, false)")
