@@ -1,7 +1,7 @@
 #lang eopl
 
 ;******************************************************************************************
-;;;;; Interpretador para lenguaje con condicionales, ligadura local y procedimientos
+;;;;; Interpretador para el lenguaje C-VID
 
 ;; La definición BNF para las expresiones del lenguaje:
 ;;
