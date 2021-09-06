@@ -21,9 +21,9 @@
 ;;                      <bool-exp (datum)>
 ;;
 ;;                  ::= <list>
-;;                      ({<expression>}*(,))
+;;                      '({<expression>}*(,))
 ;;                  ::= <vector>
-;;                      [{<expression>}*(,)]
+;;                      vector[{<expression>}*(,)]
 ;;                  ::= <record>
 ;;                      [{<expression>}*(,)]
 ;;
@@ -70,7 +70,7 @@
   (char
    ("'" letter "'") string)
   (str
-   ("\"" (arbno any) "\"") string)
+   ("\"" (arbno (not #\")) "\"") string)
   (bool
    ((or "true" "false")) string)
   ))
@@ -91,8 +91,8 @@
 ;    (expression (bool) bool-exp)
 
     ;;Constructores de Datos Predefinidos
-    (expression ("(" expression (arbno "," expression) ")") list-exp)
-    (expression ("[" expression (arbno "," expression ) "]") vector-exp)
+    (expression ("'(" expression (arbno "," expression) ")") list-exp)
+    (expression ("vector[" expression (arbno "," expression ) "]") vector-exp)
     (expression ("{" identifier "=" expression (arbno ";" identifier "=" expression) "}") record-exp)
 
     (exp-bool (bool) bool-val)
@@ -100,6 +100,7 @@
     (exp-bool (bool-op "(" exp-bool "," exp-bool ")") bin-bool-exp)
     (exp-bool (bool-neg exp-bool) neg-bool-exp)
 
+    ;;Primitivas
     (primitive-op ("<") less_than-op)
     (primitive-op (">") greater_than-op)
     (primitive-op ("<=") less_equal-op)
@@ -107,9 +108,22 @@
     (primitive-op ("==") equal)
     (primitive-op ("<>") not_equal)
     (bool-op ("AND") and-op)
-    (bool-op ("OR") and-op)
-    (bool-op ("XOR") and-op)
+    (bool-op ("OR") or-op)
+    (bool-op ("XOR") xor-op)
     (bool-neg ("NOT") neg-op)
+    (arith-prim ("+") add-prim)
+    (arith-prim ("-") substract-prim)
+    (arith-prim ("*") mult-prim)
+    (arith-prim ("%") percent-prim)
+    (arith-prim ("/") div-prim)
+    (arith-prim ("++") incr-prim)
+    (arith-prim ("--") decr-prim)
+    (str-op ("concat") concat-prim)
+    (str-op ("length") length-prim)
+
+    (expression ("(" expression arith-prim expression ")") arith-exp)
+    (expression ("length(" expression ")") length-exp)
+    (expression ("concat(" expression ";" expression ")") concat-exp)
 
     ;;Definiciones
     (expression ("global" "(" identifier "=" expression (arbno "," identifier "=" expression) ")") global-def)
@@ -127,7 +141,6 @@
 
     (for-type ("to") for-to)
     (for-type ("downto") for-downto)
-
     )
   )
 
@@ -166,5 +179,11 @@
 (scan&parse "AND (true, false)")
 (scan&parse "compare(5>2)")
 
-(scan&parse "sequence 123; 'R'; -5; true end")
+(scan&parse "sequence 123; \"Hola\" ; 'R'; -5; true end")
 (scan&parse "if compare(5>2) then 10 else 0 end")
+(scan&parse "cond [ compare(5>0) true] else 0")
+
+(scan&parse "length(\"hola\")")
+(scan&parse "concat(\"hola\" ; \" mundo\")")
+
+
