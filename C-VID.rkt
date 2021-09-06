@@ -12,6 +12,8 @@
 ;;                      <int-exp (datum)>
 ;;                  ::= <float>
 ;;                      <float-exp (datum)>
+;;                  ::= <octal>
+;;                      <octal-exp (datum)>
 ;;                  ::= <identifier>
 ;;                      <var-exp (id)>
 ;;                  ::= <char>
@@ -84,6 +86,8 @@
    ("\"" (arbno (not #\")) "\"") string)
   (bool
    ((or "true" "false")) string)
+  (octal
+   ("x8(" digit (arbno (or digit whitespace)) ")") string)
   ))
 
 ;Especificación Sintáctica (gramática)
@@ -100,6 +104,7 @@
     (expression (char) char-exp)
     (expression (str) string-exp)
     (expression (exp-bool) bool-exp)
+    (expression (octal) octal-exp)
 ;    (expression (bool) bool-exp)
 
     ;;Constructores de Datos Predefinidos
@@ -217,3 +222,4 @@
 (scan&parse "global() const x=1, y=2 in (x+y)")
 (scan&parse "global() unic x=1, y=2 in (x+y)")
 
+(scan&parse "global() x8(1 5 7)")
