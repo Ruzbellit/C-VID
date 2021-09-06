@@ -107,6 +107,7 @@
     (expression ("vector[" expression (arbno "," expression ) "]") vector-exp)
     (expression ("{" identifier "=" expression (arbno ";" identifier "=" expression) "}") record-exp)
 
+    ;;Expresiones booleanas
     (exp-bool (bool) bool-val)
     (exp-bool ("compare(" expression primitive-op expression ")") compare-exp)
     (exp-bool (bool-op "(" exp-bool "," exp-bool ")") bin-bool-exp)
