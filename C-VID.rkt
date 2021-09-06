@@ -5,8 +5,9 @@
 
 ;; La definición BNF para las expresiones del lenguaje:
 ;;
-;;  <program>       ::= <expression>
-;;                      <c-vid-program (exp)>
+;;  <program>       ::= <globals expression>
+;;  <globals>       ::= global( {<identifier> = expression}*(,) )
+;;                      <global (ids rands)>
 ;;  <expression>    ::= <int>
 ;;                      <int-exp (datum)>
 ;;                  ::= <float>
@@ -27,17 +28,24 @@
 ;;                  ::= <record>
 ;;                      [{<expression>}*(,)]
 ;;
-;;                  ::= <primitive> ({<expression>}*(,))
-;;                      <primapp-exp (prim rands)>
-;;                  ::= if <expresion> then <expresion> else <expression>
-;;                      <if-exp (exp1 exp2 exp23)>
-;;                  ::= let {identifier = <expression>}* in <expression>
-;;                      <let-exp (ids rands body)>
-;;                  ::= proc({<identificador>}*(,)) <expression>
-;;                      <proc-exp (ids body)>
+;;                  ::= var {<identifier> = <expression>}*(,) in <expression>
+;;                  ::= const {<identifier> = <expression>}*(,) in <expression>
+;;                  ::= rec {<identifier> ( {<identifier>}*(,) ) = <expression>}* in <expression>
+;;                  ::= unic {<identifier> = <expression>}*(,) in <expression>
+;;
+;;                  ::= secuence {<expresion>}+(;) end
+;;                      <secuence-exp (exps)>
+;;                  ::= if <exp-bool> then <expresion> else <expression> end
+;;                      <if-exp (exp1 exp2 exp3)>
+;;                  ::= cond { [ <expression> <expression> ] }* else <expression> end
+;;                      <cond-exp (exp1 exp2 exp3)>
+;;                  ::= while <exp-bool> do <expression> done
+;;                      <while-exp (pred body)>
+;;                  ::= for <identifier> = <expression> <for-type> <expression> do <expression> done
+;;                      <cond-exp (exp1 exp2 exp3)>
+;;
 ;;                  ::= (<expression> {<expression>}*)
 ;;                      <app-exp proc rands>
-;;  <primitive-op>  ::= + | - | * | / | > | >= | < | <= | == | <>
 ;;  <exp-bool>      ::= <bool>
 ;;                  ::= <compare-exp>
 ;;                      compare(<expression> <primitive-op> <expression>)
@@ -45,8 +53,11 @@
 ;;                      <bool-op> (<exp-bool>, <exp-bool>)
 ;;                  ::= <neg-bool-exp>
 ;;                      <neg-bool> <exp-bool>
+;;  <primitive-op>  ::= > | >= | < | <= | == | <>
 ;;  <bool-op>       ::= AND | OR | XOR 
 ;;  <bool-neg>      ::= NOT
+;;  <arith-prim>    ::= + | - | * | / | % | ++ | --
+;;  <for-type>      ::= to | downto
 
 ;******************************************************************************************
 
@@ -78,8 +89,9 @@
 ;Especificación Sintáctica (gramática)
 
 (define grammar-simple-interpreter
-  '((program (expression) c-vid-program)
+  '((program (globals expression) c-vid-program)
 
+    (globals ("global" "(" (separated-list identifier "=" expression ",") ")") global)
     (expression (identifier) var-exp)
     
     ;;Datos
@@ -118,24 +130,24 @@
     (arith-prim ("/") div-prim)
     (arith-prim ("++") incr-prim)
     (arith-prim ("--") decr-prim)
-    (str-op ("concat") concat-prim)
-    (str-op ("length") length-prim)
+    (concat-op ("concat") concat-prim)
+    (length-op ("length") length-prim)
 
     (expression ("(" expression arith-prim expression ")") arith-exp)
-    (expression ("length(" expression ")") length-exp)
-    (expression ("concat(" expression ";" expression ")") concat-exp)
+    (expression (length-op "(" expression ")") length-exp)
+    (expression (concat-op "(" expression ";" expression ")") concat-exp)
 
     ;;Definiciones
-    (expression ("global" "(" identifier "=" expression (arbno "," identifier "=" expression) ")") global-def)
-    (expression ("var" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in" expression) var-def)
-    (expression ("cons" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in" expression) cons-def)
-    (expression ("rec" "(" identifier "=" expression(arbno "," identifier "=" expression) ")" "in" expression) rec-def)
-    (expression ("unic" "(" identifier "=" expression (arbno "," identifier "=" expression) ")" "in" expression) unic-def)
+    (expression ("var" (separated-list identifier "=" expression ",") "in" expression) var-def)
+    (expression ("const" (separated-list identifier "=" expression ",") "in" expression) const-def)
+    (expression ("rec" (arbno identifier "(" (separated-list identifier ",") ")" "=" expression) "in" expression) rec-def)
+    (expression ("unic" (separated-list identifier "=" expression ",") "in" expression) unic-def)
 
     ;;Estructuras de Control
     (expression ("sequence" expression (arbno ";" expression) "end") seq-exp)
     (expression ("if" exp-bool "then" expression "else" expression "end") if-exp)
-    (expression ("cond" "[" expression expression "]" (arbno ";" "[" expression expression "]") "else" expression) cond-exp)
+    ;;(expression ("cond" "[" expression expression "]" (arbno ";" "[" expression expression "]") "else" expression) cond-exp)
+    (expression ("cond" (arbno "[" expression expression "]") "else" expression) cond-exp)
     (expression ("while" exp-bool "do" expression "done") while-exp)
     (expression ("for" identifier "=" expression for-type expression "do" expression "done") for-exp)
 
@@ -167,23 +179,40 @@
 
 
 ;;PRUEBAS
-(scan&parse "0")
-(scan&parse "1")
-(scan&parse "-1")
-(scan&parse "3.14")
-(scan&parse "-1.5")
-(scan&parse "'R'")
-(scan&parse "\"hola mundo 7\"")
-(scan&parse "true")
-(scan&parse "false")
-(scan&parse "AND (true, false)")
-(scan&parse "compare(5>2)")
+(scan&parse "global(x=1, y=2) (x+y)")
+(scan&parse "global() 0")
+(scan&parse "global() 1")
+(scan&parse "global() -1")
+(scan&parse "global() 3.14")
+(scan&parse "global() -1.5")
+(scan&parse "global() 'R'")
+(scan&parse "global() \"hola mundo 7\"")
+(scan&parse "global() true")
+(scan&parse "global() false")
+(scan&parse "global() AND (true, false)")
+(scan&parse "global() NOT true")
+(scan&parse "global() compare(5>2)")
 
-(scan&parse "sequence 123; \"Hola\" ; 'R'; -5; true end")
-(scan&parse "if compare(5>2) then 10 else 0 end")
-(scan&parse "cond [ compare(5>0) true] else 0")
+;;lista, vector y registro
+(scan&parse "global() '(1, true, 'X')")
+(scan&parse "global() vector[10, true, 'X']")
+(scan&parse "global() {x = 5; y = 7}")
 
-(scan&parse "length(\"hola\")")
-(scan&parse "concat(\"hola\" ; \" mundo\")")
+;;estructuras de control
+(scan&parse "global() sequence 123; \"Hola\" ; 'R'; -5; true end")
+(scan&parse "global() if compare(5>2) then 10 else 0 end")
+(scan&parse "global() cond [ compare(5>0) true] else 0")
+(scan&parse "global() cond [ compare(5>0) \"paso FLP\"] [compare(5>3) \"arrastrado pero lo paso\"] else 0")
+(scan&parse "global() while true do (i+1) done")
+(scan&parse "global() for x = 0 to 5 do (y+1) done")
+(scan&parse "global() for x = 10 downto 5 do (y+1) done")
 
+;; operaciones sobre cadenas
+(scan&parse "global() length(\"hola\")")
+(scan&parse "global() concat(\"hola\" ; \" mundo\")")
+
+;;definiciones
+(scan&parse "global() var x=1, y=2 in (x+y)")
+(scan&parse "global() const x=1, y=2 in (x+y)")
+(scan&parse "global() unic x=1, y=2 in (x+y)")
 
