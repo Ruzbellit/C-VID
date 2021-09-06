@@ -84,8 +84,6 @@
    ("'" letter "'") string)
   (str
    ("\"" (arbno (not #\")) "\"") string)
-  (bool
-   ((or "true" "false")) string)
   (octal
    ("x8(" digit (arbno (or digit whitespace)) ")") string)
   ))
@@ -105,7 +103,8 @@
     (expression (str) string-exp)
     (expression (exp-bool) bool-exp)
     (expression (octal) octal-exp)
-;    (expression (bool) bool-exp)
+    (exp-bool ("true") true-exp)
+    (exp-bool ("false") false-exp)
 
     ;;Constructores de Datos Predefinidos
     (expression ("'(" expression (arbno "," expression) ")") list-exp)
@@ -113,7 +112,7 @@
     (expression ("{" identifier "=" expression (arbno ";" identifier "=" expression) "}") record-exp)
 
     ;;Expresiones booleanas
-    (exp-bool (bool) bool-val)
+    ;(exp-bool (expression) bool-val)
     (exp-bool ("compare(" expression primitive-op expression ")") compare-exp)
     (exp-bool (bool-op "(" exp-bool "," exp-bool ")") bin-bool-exp)
     (exp-bool (bool-neg exp-bool) neg-bool-exp)
