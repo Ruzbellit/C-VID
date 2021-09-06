@@ -84,8 +84,6 @@
    ("'" letter "'") string)
   (str
    ("\"" (arbno (not #\")) "\"") string)
-  (octal
-   ("x8(" digit (arbno (or digit whitespace)) ")") string)
   ))
 
 ;Especificación Sintáctica (gramática)
@@ -102,13 +100,18 @@
     (expression (char) char-exp)
     (expression (str) string-exp)
     (expression (exp-bool) bool-exp)
-    (expression (octal) octal-exp)
+    (expression ("x8(" (arbno int) ")") octal-exp)
     (exp-bool ("true") true-exp)
     (exp-bool ("false") false-exp)
 
     ;;Constructores de Datos Predefinidos
-    (expression ("'(" expression (arbno "," expression) ")") list-exp)
-    (expression ("vector[" expression (arbno "," expression ) "]") vector-exp)
+    (expression (primitive-list) list-exp)
+    (primitive-list ("'(" (arbno expression (arbno "," expression)) ")") list)
+    
+    
+    (expression (primitive-vector) vector-exp)
+    (primitive-vector ("vector" "[" expression (arbno "," expression ) "]") vector)
+    
     (expression ("{" identifier "=" expression (arbno ";" identifier "=" expression) "}") record-exp)
 
     ;;Expresiones booleanas
@@ -158,6 +161,27 @@
 
     (for-type ("to") for-to)
     (for-type ("downto") for-downto)
+
+    ;;Primitivas sobre listas
+    (expression ("is-empty-list?" expression) is-empty-list)
+    (expression ("empty-list") empty-list)
+    (expression ("create-list" "(" (arbno expression (arbno "," expression)) ")") create-list)
+    (expression ("is-list?" expression) is-list)
+    (expression ("head" expression) head-list)
+    (expression ("bottom" expression) bottom-list)
+    (expression ("append" "(" expression expression ")") append-list)
+
+    ;;Primitivas sobre vectores
+    (expression ("is-vector?" expression) is-vector)
+    (expression ("create-vector" primitive-vector) create-vector)
+    (expression ("ref-vector" expression) ref-vector)
+    (expression ("set-vector" expression expression) set-vector)
+
+    ;;Primitivas sobre registros
+    (expression ("is-registro?" expression) is-registro)
+    (expression ("create-record" "(" (arbno expression (arbno "," expression)) ")") create-record)
+    (expression ("ref-record" expression expression) ref-record)
+    (expression ("set-registro" expression expression expression) set-registro)
     )
   )
 
@@ -182,7 +206,7 @@
 (define just-scan
   (sllgen:make-string-scanner scanner-spec-simple-interpreter grammar-simple-interpreter))
 
-
+(scan&parse "global(x=1, y=2) is-registro? x")
 ;;PRUEBAS
 (scan&parse "global(x=1, y=2) (x+y)")
 (scan&parse "global() 0")
