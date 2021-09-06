@@ -84,8 +84,6 @@
    ("'" letter "'") string)
   (str
    ("\"" (arbno (not #\")) "\"") string)
-  (octal
-   ("x8(" digit (arbno (or digit whitespace)) ")") string)
   ))
 
 ;Especificación Sintáctica (gramática)
@@ -102,7 +100,7 @@
     (expression (char) char-exp)
     (expression (str) string-exp)
     (expression (exp-bool) bool-exp)
-    (expression (octal) octal-exp)
+    (expression ("x8(" (arbno int) ")") octal-exp)
     (exp-bool ("true") true-exp)
     (exp-bool ("false") false-exp)
 
