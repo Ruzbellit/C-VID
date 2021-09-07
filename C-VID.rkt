@@ -105,13 +105,8 @@
     (exp-bool ("false") false-exp)
 
     ;;Constructores de Datos Predefinidos
-    (expression (primitive-list) list-exp)
-    (primitive-list ("'(" (arbno expression (arbno "," expression)) ")") list)
-    
-    
-    (expression (primitive-vector) vector-exp)
-    (primitive-vector ("vector" "[" expression (arbno "," expression ) "]") vector)
-    
+    (expression ("'(" (arbno expression (arbno "," expression)) ")") list-exp)
+    (expression ("vector" "[" expression (arbno "," expression ) "]") vector-exp)
     (expression ("{" identifier "=" expression (arbno ";" identifier "=" expression) "}") record-exp)
 
     ;;Expresiones booleanas
@@ -141,6 +136,13 @@
     (concat-op ("concat") concat-prim)
     (length-op ("length") length-prim)
 
+    ;;Primitivas aritmeticas para octales
+    (arith-prim-octal ("+") add-prim-octal)
+    (arith-prim-octal ("-") substract-prim-octal)
+    (arith-prim-octal ("*") mult-prim-octal)
+    (arith-prim-octal ("++") incr-prim-octal)
+    (arith-prim-octal ("--") decr-prim-octal)
+
     (expression ("(" expression arith-prim expression ")") arith-exp)
     (expression (length-op "(" expression ")") length-exp)
     (expression (concat-op "(" expression ";" expression ")") concat-exp)
@@ -154,7 +156,6 @@
     ;;Estructuras de Control
     (expression ("sequence" expression (arbno ";" expression) "end") seq-exp)
     (expression ("if" exp-bool "then" expression "else" expression "end") if-exp)
-    ;;(expression ("cond" "[" expression expression "]" (arbno ";" "[" expression expression "]") "else" expression) cond-exp)
     (expression ("cond" (arbno "[" expression expression "]") "else" expression) cond-exp)
     (expression ("while" exp-bool "do" expression "done") while-exp)
     (expression ("for" identifier "=" expression for-type expression "do" expression "done") for-exp)
@@ -173,15 +174,15 @@
 
     ;;Primitivas sobre vectores
     (expression ("is-vector?" expression) is-vector)
-    (expression ("create-vector" primitive-vector) create-vector)
-    (expression ("ref-vector" expression) ref-vector)
-    (expression ("set-vector" expression expression) set-vector)
+    (expression ("create-vector" "[" expression (arbno "," expression ) "]") create-vector)
+    (expression ("ref-vector" expression expression) ref-vector) ;;ref-vector (x, y) x->indice  y->vector
+    (expression ("set-vector" expression expression expression) set-vector) ;;set-vector (x, y, z) x->valor y->indice z->
 
     ;;Primitivas sobre registros
     (expression ("is-registro?" expression) is-registro)
-    (expression ("create-record" "(" (arbno expression (arbno "," expression)) ")") create-record)
-    (expression ("ref-record" expression expression) ref-record)
-    (expression ("set-registro" expression expression expression) set-registro)
+    (expression ("create-record" "{" expression (arbno "," expression) "}") create-record)
+    (expression ("ref-record" expression expression) ref-record) ;;ref-record (x, y) x-> y->registro
+    (expression ("set-registro" expression expression expression) set-registro) ;;set-registro (x, y, z) x->valor y->clave z->registro
     )
   )
 
