@@ -1,4 +1,7 @@
 #lang eopl
+;;Ruzbellit Rossy Romero Ramirez - 1925456
+;;Christian Villanueva Paez - 1924546
+
 
 ;******************************************************************************************
 ;;;;; Interpretador para el lenguaje C-VID
