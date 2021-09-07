@@ -92,7 +92,10 @@
   '((program (globals expression) c-vid-program)
 
     (globals ("global" "(" (separated-list identifier "=" expression ",") ")") global)
+    
     (expression (identifier) var-exp)
+    (expression (arith-prim "(" (separated-list expression ",")")") primapp-exp)
+    (expression ("x8-op" arith-prim-octal "(" (separated-list expression ",")")") primapp-octal-exp)
     
     ;;Datos
     (expression (int) int-exp)
@@ -207,7 +210,7 @@
 (define just-scan
   (sllgen:make-string-scanner scanner-spec-simple-interpreter grammar-simple-interpreter))
 
-(scan&parse "global(x=1, y=2) is-registro? x")
+
 ;;PRUEBAS
 (scan&parse "global(x=1, y=2) (x+y)")
 (scan&parse "global() 0")
