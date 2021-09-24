@@ -92,13 +92,17 @@
 ;Especificación Sintáctica (gramática)
 
 (define grammar-simple-interpreter
-  '((program (globals expression) c-vid-program)
-
+  '(
+    (program (globals expression) c-vid-program)
     (globals ("global" "(" (separated-list identifier "=" expression ",") ")") global)
     
     (expression (identifier) var-exp)
-    (expression (arith-prim "(" (separated-list expression ",")")") primapp-exp)
-    (expression ("x8-op" arith-prim-octal "(" (separated-list expression ",")")") primapp-octal-exp)
+
+    ;;Definiciones
+    (expression ("var" (separated-list identifier "=" expression ",") "in" expression) var-def)
+    (expression ("const" (separated-list identifier "=" expression ",") "in" expression) const-def)
+    (expression ("rec" (arbno identifier "(" (separated-list identifier ",") ")" "=" expression) "in" expression) rec-def)
+    (expression ("unic" (separated-list identifier "=" expression ",") "in" expression) unic-def)
     
     ;;Datos
     (expression (int) int-exp)
@@ -107,8 +111,6 @@
     (expression (str) string-exp)
     (expression (exp-bool) bool-exp)
     (expression ("x8(" (arbno int) ")") octal-exp)
-    (exp-bool ("true") true-exp)
-    (exp-bool ("false") false-exp)
 
     ;;Constructores de Datos Predefinidos
     (expression ("'(" (arbno expression (arbno "," expression)) ")") list-exp)
@@ -116,12 +118,11 @@
     (expression ("{" identifier "=" expression (arbno ";" identifier "=" expression) "}") record-exp)
 
     ;;Expresiones booleanas
-    ;(exp-bool (expression) bool-val)
+    (exp-bool ("true") true-exp)
+    (exp-bool ("false") false-exp)
     (exp-bool ("compare(" expression primitive-op expression ")") compare-exp)
     (exp-bool (bool-op "(" exp-bool "," exp-bool ")") bin-bool-exp)
     (exp-bool (bool-neg exp-bool) neg-bool-exp)
-
-    ;;Primitivas
     (primitive-op ("<") less_than-op)
     (primitive-op (">") greater_than-op)
     (primitive-op ("<=") less_equal-op)
@@ -132,32 +133,6 @@
     (bool-op ("OR") or-op)
     (bool-op ("XOR") xor-op)
     (bool-neg ("NOT") neg-op)
-    (arith-prim ("+") add-prim)
-    (arith-prim ("-") substract-prim)
-    (arith-prim ("*") mult-prim)
-    (arith-prim ("%") percent-prim)
-    (arith-prim ("/") div-prim)
-    (arith-prim ("++") incr-prim)
-    (arith-prim ("--") decr-prim)
-    (concat-op ("concat") concat-prim)
-    (length-op ("length") length-prim)
-
-    ;;Primitivas aritmeticas para octales
-    (arith-prim-octal ("+") add-prim-octal)
-    (arith-prim-octal ("-") substract-prim-octal)
-    (arith-prim-octal ("*") mult-prim-octal)
-    (arith-prim-octal ("++") incr-prim-octal)
-    (arith-prim-octal ("--") decr-prim-octal)
-
-    (expression ("(" expression arith-prim expression ")") arith-exp)
-    (expression (length-op "(" expression ")") length-exp)
-    (expression (concat-op "(" expression ";" expression ")") concat-exp)
-
-    ;;Definiciones
-    (expression ("var" (separated-list identifier "=" expression ",") "in" expression) var-def)
-    (expression ("const" (separated-list identifier "=" expression ",") "in" expression) const-def)
-    (expression ("rec" (arbno identifier "(" (separated-list identifier ",") ")" "=" expression) "in" expression) rec-def)
-    (expression ("unic" (separated-list identifier "=" expression ",") "in" expression) unic-def)
 
     ;;Estructuras de Control
     (expression ("sequence" expression (arbno ";" expression) "end") seq-exp)
@@ -165,9 +140,32 @@
     (expression ("cond" (arbno "[" expression expression "]") "else" expression) cond-exp)
     (expression ("while" exp-bool "do" expression "done") while-exp)
     (expression ("for" identifier "=" expression for-type expression "do" expression "done") for-exp)
-
     (for-type ("to") for-to)
     (for-type ("downto") for-downto)
+    
+    ;;Primitivas aritmeticas para enteros
+    (expression ("(" expression arith-prim expression ")") arith-exp)
+    (expression (simple-arith-prim expression) simple-arith-exp)
+    (arith-prim ("+") add-prim)
+    (arith-prim ("-") substract-prim)
+    (arith-prim ("*") mult-prim)
+    (arith-prim ("/") div-prim)
+    (arith-prim ("%") percent-prim)
+    (simple-arith-prim ("++") incr-prim)
+    (simple-arith-prim ("--") decr-prim)
+
+    ;;Primitivas aritmeticas para octales
+    (expression ("x8-op" "(" expression arith-prim-octal expression ")") arith-octal-exp)
+    (expression (simple-arith-prim-octal expression) simple-arith-octal-exp)
+    (arith-prim-octal ("+") add-prim-octal)
+    (arith-prim-octal ("-") substract-prim-octal)
+    (arith-prim-octal ("*") mult-prim-octal)
+    (simple-arith-prim-octal ("+") incr-prim-octal)
+    (simple-arith-prim-octal ("-") decr-prim-octal)
+    
+    ;;Primitivas sobre cadenas
+    (expression ("lenght" "(" expression ")") length-exp)
+    (expression ("concat" "(" expression ";" expression ")") concat-exp)
 
     ;;Primitivas sobre listas
     (expression ("is-empty-list?" expression) is-empty-list)
@@ -216,6 +214,14 @@
 
 ;;PRUEBAS
 (scan&parse "global(x=1, y=2) (x+y)")
+(scan&parse "global(nombre=\"Victor\") nombre")
+
+;;Definiciones
+(scan&parse "global() var x=1, y=2 in (x+y)")
+(scan&parse "global() const x=1, y=2 in (x+y)")
+(scan&parse "global() unic x=1, y=2 in (x+y)")
+
+;;Datos
 (scan&parse "global() 0")
 (scan&parse "global() 1")
 (scan&parse "global() -1")
@@ -223,18 +229,23 @@
 (scan&parse "global() -1.5")
 (scan&parse "global() 'R'")
 (scan&parse "global() \"hola mundo 7\"")
+(scan&parse "global() length(\"hola\")")
+(scan&parse "global() concat(\"hola\" ; \" mundo\")")
+(scan&parse "global() x8(1 5 7)")
+
+;;Expresiones booleanas
 (scan&parse "global() true")
 (scan&parse "global() false")
 (scan&parse "global() AND (true, false)")
 (scan&parse "global() NOT true")
 (scan&parse "global() compare(5>2)")
 
-;;lista, vector y registro
+;;Constructores de datos predefinidos
 (scan&parse "global() '(1, true, 'X')")
 (scan&parse "global() vector[10, true, 'X']")
 (scan&parse "global() {x = 5; y = 7}")
 
-;;estructuras de control
+;;Estructuras de control
 (scan&parse "global() sequence 123; \"Hola\" ; 'R'; -5; true end")
 (scan&parse "global() if compare(5>2) then 10 else 0 end")
 (scan&parse "global() cond [ compare(5>0) true] else 0")
@@ -243,13 +254,42 @@
 (scan&parse "global() for x = 0 to 5 do (y+1) done")
 (scan&parse "global() for x = 10 downto 5 do (y+1) done")
 
-;; operaciones sobre cadenas
-(scan&parse "global() length(\"hola\")")
-(scan&parse "global() concat(\"hola\" ; \" mundo\")")
+;;Primitivas aritmeticas para enteros
+(scan&parse "global() (12 + 7)")
+(scan&parse "global() (7 - 27)")
+(scan&parse "global() ((1 + 5) * 3)")
+(scan&parse "global() (15 / 3)")
+(scan&parse "global() (100 % 50)")
+(scan&parse "global() ++ 0")
+(scan&parse "global() -- 13")
 
-;;definiciones
-(scan&parse "global() var x=1, y=2 in (x+y)")
-(scan&parse "global() const x=1, y=2 in (x+y)")
-(scan&parse "global() unic x=1, y=2 in (x+y)")
+;;Primitivas aritmeticas para octales
+(scan&parse "global() x8-op(x8(1 5 7) + x8(8 0 1))")
+(scan&parse "global() x8-op(x8(8 8 8) - x8(8 8 0))")
+(scan&parse "global() x8-op(x8(0 0 0) * x8(1 1 1))")
+(scan&parse "global() + x8(4 5 7))")
+(scan&parse "global() + x8(8 0 1))")
 
-(scan&parse "global() x8(1 5 7)")
+;;Primitivas sobre cadenas
+(scan&parse "global() lenght(\"Hola\")")
+(scan&parse "global(nombre=\"Carlos\") concat(nombre, \"Andrade\")")
+
+;;Primitivas sobre listas
+;;arreglar implementacion de las listas
+
+;;Primitivas sobre vectores
+(scan&parse "global() is-vector? [10, false, 'R']")
+(scan&parse "global() create-vector [true, 11, 2]")
+(scan&parse "global() ref-vector 1 [0, 1, 2, 3]")
+(scan&parse "global() set-vector true 2 [0, 1, 2, 3, 4, 5]")
+
+;;Primitivas sobre registros
+(scan&parse "global() is-registro? {nombre=\"Emily\", apellido=\"Cardona\"}")
+(scan&parse "global() create-record {celular=315496, fijo=3654}")
+(scan&parse "global() ref-record nombre {nombre=\"Emily\", apellido=\"Cardona\"}")
+(scan&parse "global() set-registro 20 edad {edad=0}")
+
+
+
+
+
