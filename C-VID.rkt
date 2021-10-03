@@ -72,7 +72,7 @@
 '((white-sp
    (whitespace) skip)
   (comment
-   ("%" (arbno (not #\newline))) skip)
+   ("//" (arbno (not #\newline))) skip)
   (identifier
    (letter (arbno (or letter digit "?"))) symbol)
   (int
@@ -164,8 +164,8 @@
     (simple-arith-prim-octal ("-") decr-prim-octal)
     
     ;;Primitivas sobre cadenas
-    (expression ("lenght" "(" expression ")") length-exp)
-    (expression ("concat" "(" expression ";" expression ")") concat-exp)
+    ;(expression ("lenght" "(" expression ")") length-exp)
+    ;(expression ("concat" "(" expression ";" expression ")") concat-exp)
 
     ;;Primitivas sobre listas
     (expression ("is-empty-list?" expression) is-empty-list)
@@ -183,7 +183,7 @@
     (expression ("set-vector" expression expression expression) set-vector) ;;set-vector (x, y, z) x->valor y->indice z->
 
     ;;Primitivas sobre registros
-    (expression ("is-registro?" expression) is-registro)
+    (expression ("is-record?" expression) is-record)
     (expression ("create-record" "{" expression (arbno "," expression) "}") create-record)
     (expression ("ref-record" expression expression) ref-record) ;;ref-record (x, y) x-> y->registro
     (expression ("set-registro" expression expression expression) set-registro) ;;set-registro (x, y, z) x->valor y->clave z->registro
@@ -229,8 +229,8 @@
 (scan&parse "global() -1.5")
 (scan&parse "global() 'R'")
 (scan&parse "global() \"hola mundo 7\"")
-(scan&parse "global() length(\"hola\")")
-(scan&parse "global() concat(\"hola\" ; \" mundo\")")
+;(scan&parse "global() length(\"hola\")")
+;(scan&parse "global() concat(\"hola\" ; \" mundo\")")
 (scan&parse "global() x8(1 5 7)")
 
 ;;Expresiones booleanas
@@ -267,27 +267,27 @@
 (scan&parse "global() x8-op(x8(1 5 7) + x8(8 0 1))")
 (scan&parse "global() x8-op(x8(8 8 8) - x8(8 8 0))")
 (scan&parse "global() x8-op(x8(0 0 0) * x8(1 1 1))")
-(scan&parse "global() + x8(4 5 7))")
-(scan&parse "global() + x8(8 0 1))")
+(scan&parse "global() + x8(4 5 7)")
+(scan&parse "global() + x8(8 0 1)")
 
 ;;Primitivas sobre cadenas
-(scan&parse "global() lenght(\"Hola\")")
-(scan&parse "global(nombre=\"Carlos\") concat(nombre, \"Andrade\")")
+;(scan&parse "global() lenght(\"Hola\")")
+;(scan&parse "global(nombre=\"Carlos\") concat(nombre, \"Andrade\")")
 
 ;;Primitivas sobre listas
 ;;arreglar implementacion de las listas
 
 ;;Primitivas sobre vectores
-(scan&parse "global() is-vector? [10, false, 'R']")
-(scan&parse "global() create-vector [true, 11, 2]")
-(scan&parse "global() ref-vector 1 [0, 1, 2, 3]")
-(scan&parse "global() set-vector true 2 [0, 1, 2, 3, 4, 5]")
+(scan&parse "global() is-vector? vector[10, false, 'R']")
+(scan&parse "global() create-vector[true, 11, 2]")
+(scan&parse "global() ref-vector 1 vector[0, 1, 2, 3]")
+(scan&parse "global() set-vector true 2 vector[0, 1, 2, 3, 4, 5]")
 
-;;Primitivas sobre registros
-(scan&parse "global() is-registro? {nombre=\"Emily\", apellido=\"Cardona\"}")
-(scan&parse "global() create-record {celular=315496, fijo=3654}")
-(scan&parse "global() ref-record nombre {nombre=\"Emily\", apellido=\"Cardona\"}")
-(scan&parse "global() set-registro 20 edad {edad=0}")
+;;;Primitivas sobre registros
+(scan&parse "global() is-record? {nombre=\"Emily\"; apellido=\"Cardona\"}")
+;(scan&parse "global() create-record {celular=315496, fijo=3654}")
+;(scan&parse "global() ref-record nombre {nombre=\"Emily\", apellido=\"Cardona\"}")
+;(scan&parse "global() set-registro 20 edad {edad=0}")
 
 
 
