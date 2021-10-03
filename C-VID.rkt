@@ -151,7 +151,7 @@
     (arith-prim ("-") substract-prim)
     (arith-prim ("*") mult-prim)
     (arith-prim ("/") div-prim)
-    (arith-prim ("%") percent-prim)
+    (arith-prim ("%") remainder-prim)
     (simple-arith-prim ("++") incr-prim)
     (simple-arith-prim ("--") decr-prim)
 
@@ -212,6 +212,200 @@
 (define just-scan
   (sllgen:make-string-scanner scanner-spec-simple-interpreter grammar-simple-interpreter))
 
+;El Interpretador (FrontEnd + Evaluación + señal para lectura )
+
+(define interpretador
+  (sllgen:make-rep-loop  "--> "
+    (lambda (pgm) (eval-program  pgm))
+    (sllgen:make-stream-parser
+      scanner-spec-simple-interpreter
+      grammar-simple-interpreter)))
+
+;*******************************************************************************************
+;El Interprete
+
+;eval-program: <programa> -> numero
+; función que evalúa un programa teniendo en cuenta un ambiente dado (se inicializa dentro del programa)
+
+; PENDIENTE: pasar globals en vez de init-env
+(define eval-program
+  (lambda (pgm)
+    (cases program pgm
+      (c-vid-program (globals expression)
+                 (eval-expression expression (init-env))))))
+
+(define eval-expression
+  (lambda (exp env)
+    (cases expression exp
+      (int-exp (datum) datum)
+      (float-exp (datum) datum)
+      (bool-exp (datum) datum)
+      (string-exp (datum) datum)
+      (arith-exp (rand1 prim rand2)
+                   (apply-arith-prim (eval-expression rand1 env) prim (eval-expression rand2 env)))
+      (else 0)
+      )))
+
+; TEMPORAL, remplazar con globals
+(define init-env
+  (lambda ()
+    (extend-env
+     '(i v x)
+     '(1 5 10)
+     (empty-env))))
+
+;apply-arith-primitive: <list-of-expression> -> numero
+(define apply-arith-prim
+  (lambda (rand1 prim rand2)
+    (cases arith-prim prim
+      (add-prim () (+ rand1 rand2))
+      (substract-prim () (- rand1 rand2))
+      (mult-prim () (* rand1 rand2))
+      (div-prim () (/ rand1 rand2))
+      (remainder-prim () (remainder rand1 rand2)))))
+
+;*******************************************************************************************
+;Procedimientos
+(define-datatype procval procval?
+  (closure
+   (ids (list-of symbol?))
+   (body expression?)
+   (env environment?)))
+
+;apply-procedure: evalua el cuerpo de un procedimientos en el ambiente extendido correspondiente
+(define apply-procedure
+  (lambda (proc args)
+    (cases procval proc
+      (closure (ids body env)
+               (eval-expression body (extend-env ids args env))))))
+;*******************************************************************************************
+;Ambientes
+
+;definición del tipo de dato ambiente
+(define-datatype environment environment?
+  (empty-env-record)
+  (extended-env-record
+   (syms (list-of symbol?))
+   (vec vector?)
+   (env environment?)))
+
+(define scheme-value? (lambda (v) #t))
+
+;empty-env:      -> enviroment
+;función que crea un ambiente vacío
+(define empty-env
+  (lambda ()
+    (empty-env-record)))       ;llamado al constructor de ambiente vacío
+
+
+;extend-env: <list-of symbols> <list-of numbers> enviroment -> enviroment
+;función que crea un ambiente extendido
+(define extend-env
+  (lambda (syms vals env)
+    (extended-env-record syms (list->vector vals) env)))
+
+;extend-env-recursively: <list-of symbols> <list-of <list-of symbols>> <list-of expressions> environment -> environment
+;función que crea un ambiente extendido para procedimientos recursivos
+(define extend-env-recursively
+  (lambda (proc-names idss bodies old-env)
+    (let ((len (length proc-names)))
+      (let ((vec (make-vector len)))
+        (let ((env (extended-env-record proc-names vec old-env)))
+          (for-each
+            (lambda (pos ids body)
+              (vector-set! vec pos (closure ids body env)))
+            (iota len) idss bodies)
+          env)))))
+
+;iota: number -> list
+;función que retorna una lista de los números desde 0 hasta end
+(define iota
+  (lambda (end)
+    (let loop ((next 0))
+      (if (>= next end) '()
+        (cons next (loop (+ 1 next)))))))
+
+;(define iota
+;  (lambda (end)
+;    (iota-aux 0 end)))
+;
+;(define iota-aux
+;  (lambda (ini fin)
+;    (if (>= ini fin)
+;        ()
+;        (cons ini (iota-aux (+ 1 ini) fin)))))
+
+;función que busca un símbolo en un ambiente
+(define apply-env
+  (lambda (env sym)
+    (deref (apply-env-ref env sym))))
+     ;(apply-env-ref env sym)))
+    ;env))
+(define apply-env-ref
+  (lambda (env sym)
+    (cases environment env
+      (empty-env-record ()
+                        (eopl:error 'apply-env-ref "No binding for ~s" sym))
+      (extended-env-record (syms vals env)
+                           (let ((pos (rib-find-position sym syms)))
+                             (if (number? pos)
+                                 (a-ref pos vals)
+                                 (apply-env-ref env sym)))))))
+
+
+;*******************************************************************************************
+;Referencias
+
+(define-datatype reference reference?
+  (a-ref (position integer?)
+         (vec vector?)))
+
+(define deref
+  (lambda (ref)
+    (primitive-deref ref)))
+
+(define primitive-deref
+  (lambda (ref)
+    (cases reference ref
+      (a-ref (pos vec)
+             (vector-ref vec pos)))))
+
+(define setref!
+  (lambda (ref val)
+    (primitive-setref! ref val)))
+
+(define primitive-setref!
+  (lambda (ref val)
+    (cases reference ref
+      (a-ref (pos vec)
+             (vector-set! vec pos val)))))
+
+
+;****************************************************************************************
+;Funciones Auxiliares
+
+; funciones auxiliares para encontrar la posición de un símbolo
+; en la lista de símbolos de un ambiente
+
+(define rib-find-position
+  (lambda (sym los)
+    (list-find-position sym los)))
+
+(define list-find-position
+  (lambda (sym los)
+    (list-index (lambda (sym1) (eqv? sym1 sym)) los)))
+
+(define list-index
+  (lambda (pred ls)
+    (cond
+      ((null? ls) #f)
+      ((pred (car ls)) 0)
+      (else (let ((list-index-r (list-index pred (cdr ls))))
+              (if (number? list-index-r)
+                (+ list-index-r 1)
+                #f))))))
+
+;******************************************************************************************
 
 ;;PRUEBAS
 (scan&parse "global(x=1, y=2) (x+y)")
@@ -291,7 +485,4 @@
 (scan&parse "global() ref-record nombre {nombre=\"Emily\"; apellido=\"Cardona\"}")
 (scan&parse "global() set-registro 20 edad {edad=0}")
 
-
-
-
-
+(interpretador)
