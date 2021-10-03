@@ -53,14 +53,14 @@
 ;;                      <app-exp proc rands>
 ;;  <exp-bool>      ::= <bool>
 ;;                  ::= <compare-exp>
-;;                      compare(<expression> <primitive-op> <expression>)
+;;                      compare(<expression> <bool-prim> <expression>)
 ;;                  ::= <bin-bool-exp>
 ;;                      <bool-op> (<exp-bool>, <exp-bool>)
 ;;                  ::= <neg-bool-exp>
 ;;                      <neg-bool> <exp-bool>
-;;  <primitive-op>  ::= > | >= | < | <= | == | <>
+;;  <bool-prim>  ::= > | >= | < | <= | == | <>
 ;;  <bool-op>       ::= AND | OR | XOR 
-;;  <bool-neg>      ::= NOT
+;;  <simple-bool-op>::= NOT
 ;;  <arith-prim>    ::= + | - | * | / | % | ++ | --
 ;;  <for-type>      ::= to | downto
 
@@ -112,6 +112,7 @@
     (expression (str) string-exp)
     (expression (exp-bool) bool-exp)
     (expression ("x8(" (arbno int) ")") octal-exp)
+    (expression ("print" "(" expression ")") print-exp)
 
     ;;Constructores de Datos Predefinidos
     (expression ("'(" (arbno expression (arbno "," expression)) ")") list-exp)
@@ -121,19 +122,19 @@
     ;;Expresiones booleanas
     (exp-bool ("true") true-exp)
     (exp-bool ("false") false-exp)
-    (exp-bool ("compare(" expression primitive-op expression ")") compare-exp)
+    (exp-bool ("compare(" expression bool-prim expression ")") compare-exp)
     (exp-bool (bool-op "(" exp-bool "," exp-bool ")") bin-bool-exp)
-    (exp-bool (bool-neg exp-bool) neg-bool-exp)
-    (primitive-op ("<") less_than-op)
-    (primitive-op (">") greater_than-op)
-    (primitive-op ("<=") less_equal-op)
-    (primitive-op (">=") greater_equal-op)
-    (primitive-op ("==") equal)
-    (primitive-op ("<>") not_equal)
-    (bool-op ("AND") and-op)
-    (bool-op ("OR") or-op)
-    (bool-op ("XOR") xor-op)
-    (bool-neg ("NOT") neg-op)
+    (exp-bool (simple-bool-op exp-bool) neg-bool-exp)
+    (bool-prim ("<") less-than-prim)
+    (bool-prim (">") greater-than-prim)
+    (bool-prim ("<=") less-equal-prim)
+    (bool-prim (">=") greater-equal-prim)
+    (bool-prim ("==") equal-prim)
+    (bool-prim ("<>") not-equal-prim)
+    (bool-op ("AND") and-prim)
+    (bool-op ("OR") or-prim)
+    (bool-op ("XOR") xor-prim)
+    (simple-bool-op ("NOT") neg-prim)
 
     ;;Estructuras de Control
     (expression ("sequence" expression (arbno ";" expression) "end") seq-exp)
@@ -148,7 +149,7 @@
     (expression ("(" expression arith-prim expression ")") arith-exp)
     (expression (simple-arith-prim expression) simple-arith-exp)
     (arith-prim ("+") add-prim)
-    (arith-prim ("-") substract-prim)
+    (arith-prim ("-") subtract-prim)
     (arith-prim ("*") mult-prim)
     (arith-prim ("/") div-prim)
     (arith-prim ("%") remainder-prim)
@@ -159,7 +160,7 @@
     (expression ("x8-op" "(" expression arith-prim-octal expression ")") arith-octal-exp)
     (expression (simple-arith-prim-octal expression) simple-arith-octal-exp)
     (arith-prim-octal ("+") add-prim-octal)
-    (arith-prim-octal ("-") substract-prim-octal)
+    (arith-prim-octal ("-") subtract-prim-octal)
     (arith-prim-octal ("*") mult-prim-octal)
     (simple-arith-prim-octal ("+") incr-prim-octal)
     (simple-arith-prim-octal ("-") decr-prim-octal)
@@ -227,7 +228,6 @@
 ;eval-program: <programa> -> numero
 ; función que evalúa un programa teniendo en cuenta un ambiente dado (se inicializa dentro del programa)
 
-; PENDIENTE: pasar globals en vez de init-env
 (define eval-program
   (lambda (pgm)
     (cases program pgm
@@ -246,7 +246,6 @@
     (cases expression exp
       (int-exp (datum) datum)
       (float-exp (datum) datum)
-      (bool-exp (datum) datum)
       (string-exp (datum) datum)
       (var-exp (id) (apply-env env id))
       (arith-exp (rand1 prim rand2)
@@ -261,7 +260,10 @@
                   (apply-env-ref env id)
                   (eval-expression rhs-exp env))
                  1))
-      
+      (bool-exp (datum)
+                (eval-boolean-exp datum env))
+      (print-exp (datum)
+                 (eopl:printf ">> ~a~%" (eval-expression datum env)))
       (else 0)
       )))
 
@@ -275,17 +277,47 @@
   (lambda (rand env)
     (eval-expression rand env)))
 
-;(let ((args (eval-rands rands empty-env))) (extend-env ids args empty-env))
+;eval-boolean-exp: <boolean-exp> -> boolean
+(define eval-boolean-exp
+  (lambda (exp env)
+    (cases exp-bool exp
+      (true-exp () #t)
+      (false-exp () #f)
+      (compare-exp (rand1 prim rand2)
+                   (apply-bool-primitive prim (eval-expression rand1 env) (eval-expression rand2 env)))
+      (bin-bool-exp (bool-op rand1 rand2)
+                    (apply-bin-bool-primitive bool-op (eval-boolean-exp rand1 env) (eval-boolean-exp rand2 env)))
+      (neg-bool-exp (bool-neg datum) (not (eval-boolean-exp datum env)))
+      )))
 
-;apply-arith-primitive: <list-of-expression> -> numero
+;apply-arith-primitive: numero * <arith-prim> * numero -> numero
 (define apply-arith-prim
   (lambda (rand1 prim rand2)
     (cases arith-prim prim
       (add-prim () (+ rand1 rand2))
-      (substract-prim () (- rand1 rand2))
+      (subtract-prim () (- rand1 rand2))
       (mult-prim () (* rand1 rand2))
       (div-prim () (/ rand1 rand2))
       (remainder-prim () (remainder rand1 rand2)))))
+
+;apply-bool-primitive: <bool-prim> * <bool> * <bool> -> <bool>
+(define apply-bool-primitive
+  (lambda (prim rand1 rand2)
+    (cases bool-prim prim
+      (less-than-prim () (< rand1 rand2))
+      (greater-than-prim () (> rand1 rand2))
+      (less-equal-prim () (<= rand1 rand2))
+      (greater-equal-prim () (>= rand1 rand2))
+      (equal-prim () (equal? rand1 rand2))
+      (not-equal-prim () (not (equal? rand1 rand2))))))
+
+;apply-bin-bool-primitive: <bool-op> * <bool> * <bool> -> <bool>
+(define apply-bin-bool-primitive
+  (lambda (prim rand1 rand2)
+    (cases bool-op prim
+      (and-prim () (and rand1 rand2))
+      (or-prim () (or rand1 rand2))
+      (xor-prim () (or (and rand1 (not rand2)) (and (not rand1) rand2))))))
 
 ;*******************************************************************************************
 ;Procedimientos
@@ -453,11 +485,24 @@
 (scan&parse "global() x8(1 5 7)")
 
 ;;Expresiones booleanas
-(scan&parse "global() true")
-(scan&parse "global() false")
-(scan&parse "global() AND (true, false)")
-(scan&parse "global() NOT true")
-(scan&parse "global() compare(5>2)")
+(scan&parse "global() true")  ; -> #t
+(scan&parse "global() false")  ; -> #f
+(scan&parse "global() AND (true, false)") ; -> #f
+(scan&parse "global() AND (true, true)") ; -> #t
+(scan&parse "global() NOT true")  ; -> #f
+(scan&parse "global() XOR (false, false)") ; -> #f
+(scan&parse "global() XOR (true, true)") ; -> #f
+(scan&parse "global() XOR (true, false)") ; -> #t
+(scan&parse "global() XOR (false, true)") ; -> #t
+(scan&parse "global() NOT false")  ; -> #t
+(scan&parse "global() compare(5>2)") ; -> #t
+(scan&parse "global() compare(5<2)") ; -> #f
+(scan&parse "global() compare(5>=2)") ; -> #t
+(scan&parse "global() compare(5<=2)") ; -> #f
+(scan&parse "global() compare(5<>2)") ; -> #t
+(scan&parse "global() compare(5==2)") ; -> #f
+(scan&parse "global() compare(5==5)") ; -> #t
+
 
 ;;Constructores de datos predefinidos
 (scan&parse "global() '(1, true, 'X')")
@@ -507,5 +552,8 @@
 (scan&parse "global() create-record {celular=315496 ; fijo=3654}")
 (scan&parse "global() ref-record nombre {nombre=\"Emily\"; apellido=\"Cardona\"}")
 (scan&parse "global() set-registro 20 edad {edad=0}")
+
+;;Imprimir por salida estandar
+(scan&parse "global() var x=1, y=2 in print((5+y))") ;; imprime 7
 
 (interpretador)
