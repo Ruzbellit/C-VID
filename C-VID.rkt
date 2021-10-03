@@ -97,6 +97,7 @@
     (globals ("global" "(" (separated-list identifier "=" expression ",") ")") global)
     
     (expression (identifier) var-exp)
+    (expression ("set" identifier "=" expression) set-exp)
 
     ;;Definiciones
     (expression ("var" (separated-list identifier "=" expression ",") "in" expression) var-def)
@@ -164,7 +165,7 @@
     (simple-arith-prim-octal ("-") decr-prim-octal)
     
     ;;Primitivas sobre cadenas
-    (expression ("lenght" "(" expression ")") length-exp)
+    (expression ("length" "(" expression ")") length-exp)
     (expression ("concat" "(" expression "," expression ")") concat-exp)
 
     ;;Primitivas sobre listas
@@ -184,7 +185,7 @@
 
     ;;Primitivas sobre registros
     (expression ("is-record?" expression) is-record)
-    (expression ("create-record" "{" expression (arbno "," expression) "}") create-record)
+    (expression ("create-record" "{" identifier "=" expression (arbno ";" identifier "=" expression) "}") create-record)
     (expression ("ref-record" expression expression) ref-record) ;;ref-record (x, y) x-> y->registro
     (expression ("set-registro" expression expression expression) set-registro) ;;set-registro (x, y, z) x->valor y->clave z->registro
     )
@@ -215,6 +216,7 @@
 ;;PRUEBAS
 (scan&parse "global(x=1, y=2) (x+y)")
 (scan&parse "global(nombre=\"Victor\") nombre")
+(scan&parse "global(nombre=\"Victor\") set nombre=\"Sarah\"")
 
 ;;Definiciones
 (scan&parse "global() var x=1, y=2 in (x+y)")
@@ -229,8 +231,8 @@
 (scan&parse "global() -1.5")
 (scan&parse "global() 'R'")
 (scan&parse "global() \"hola mundo 7\"")
-;(scan&parse "global() length(\"hola\")")
-;(scan&parse "global() concat(\"hola\" ; \" mundo\")")
+(scan&parse "global() length(\"hola\")")
+(scan&parse "global() concat(\"hola\" , \" mundo\")")
 (scan&parse "global() x8(1 5 7)")
 
 ;;Expresiones booleanas
@@ -271,7 +273,7 @@
 (scan&parse "global() + x8(8 0 1)")
 
 ;;Primitivas sobre cadenas
-(scan&parse "global() lenght(\"Hola\")")
+(scan&parse "global() length(\"Hola\")")
 (scan&parse "global(nombre=\"Carlos\") concat(nombre, \"Andrade\")")
 
 ;;Primitivas sobre listas
@@ -285,9 +287,9 @@
 
 ;;;Primitivas sobre registros
 (scan&parse "global() is-record? {nombre=\"Emily\"; apellido=\"Cardona\"}")
-;(scan&parse "global() create-record {celular=315496, fijo=3654}")
-;(scan&parse "global() ref-record nombre {nombre=\"Emily\", apellido=\"Cardona\"}")
-;(scan&parse "global() set-registro 20 edad {edad=0}")
+(scan&parse "global() create-record {celular=315496 ; fijo=3654}")
+(scan&parse "global() ref-record nombre {nombre=\"Emily\"; apellido=\"Cardona\"}")
+(scan&parse "global() set-registro 20 edad {edad=0}")
 
 
 
