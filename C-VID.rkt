@@ -164,8 +164,8 @@
     (simple-arith-prim-octal ("-") decr-prim-octal)
     
     ;;Primitivas sobre cadenas
-    ;(expression ("lenght" "(" expression ")") length-exp)
-    ;(expression ("concat" "(" expression ";" expression ")") concat-exp)
+    (expression ("lenght" "(" expression ")") length-exp)
+    (expression ("concat" "(" expression "," expression ")") concat-exp)
 
     ;;Primitivas sobre listas
     (expression ("is-empty-list?" expression) is-empty-list)
@@ -271,8 +271,8 @@
 (scan&parse "global() + x8(8 0 1)")
 
 ;;Primitivas sobre cadenas
-;(scan&parse "global() lenght(\"Hola\")")
-;(scan&parse "global(nombre=\"Carlos\") concat(nombre, \"Andrade\")")
+(scan&parse "global() lenght(\"Hola\")")
+(scan&parse "global(nombre=\"Carlos\") concat(nombre, \"Andrade\")")
 
 ;;Primitivas sobre listas
 ;;arreglar implementacion de las listas
