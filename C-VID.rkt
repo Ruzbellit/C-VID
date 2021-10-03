@@ -10,7 +10,7 @@
 ;;
 ;;  <program>       ::= <globals expression>
 ;;  <globals>       ::= global( {<identifier> = expression}*(,) )
-;;                      <global (ids rands)>
+;;                      <global-env (ids rands)>
 ;;  <expression>    ::= <int>
 ;;                      <int-exp (datum)>
 ;;                  ::= <float>
@@ -94,7 +94,7 @@
 (define grammar-simple-interpreter
   '(
     (program (globals expression) c-vid-program)
-    (globals ("global" "(" (separated-list identifier "=" expression ",") ")") global)
+    (globals ("global" "(" (separated-list identifier "=" expression ",") ")") global-env)
     
     (expression (identifier) var-exp)
     (expression ("set" identifier "=" expression) set-exp)
@@ -232,7 +232,14 @@
   (lambda (pgm)
     (cases program pgm
       (c-vid-program (globals expression)
-                 (eval-expression expression (init-env))))))
+                 (eval-expression expression (init-globals globals))))))
+
+; inicializa el ambiente de globals
+(define init-globals
+   (lambda (glb)
+    (cases globals glb
+       (global-env (ids rands)
+                   (extend-env ids (eval-rands rands empty-env) (empty-env))))))
 
 (define eval-expression
   (lambda (exp env)
@@ -241,18 +248,34 @@
       (float-exp (datum) datum)
       (bool-exp (datum) datum)
       (string-exp (datum) datum)
+      (var-exp (id) (apply-env env id))
       (arith-exp (rand1 prim rand2)
                    (apply-arith-prim (eval-expression rand1 env) prim (eval-expression rand2 env)))
+      (var-def (ids rands body)
+               (let ((args (eval-rands rands env)))
+                 (eval-expression body
+                                  (extend-env ids args env))))
+      (set-exp (id rhs-exp)
+               (begin
+                 (setref!
+                  (apply-env-ref env id)
+                  (eval-expression rhs-exp env))
+                 1))
+      
       (else 0)
       )))
 
-; TEMPORAL, remplazar con globals
-(define init-env
-  (lambda ()
-    (extend-env
-     '(i v x)
-     '(1 5 10)
-     (empty-env))))
+; funciones auxiliares para aplicar eval-expression a cada elemento de una 
+; lista de operandos (expresiones)
+(define eval-rands
+  (lambda (rands env)
+    (map (lambda (x) (eval-rand x env)) rands)))
+
+(define eval-rand
+  (lambda (rand env)
+    (eval-expression rand env)))
+
+;(let ((args (eval-rands rands empty-env))) (extend-env ids args empty-env))
 
 ;apply-arith-primitive: <list-of-expression> -> numero
 (define apply-arith-prim
@@ -408,14 +431,16 @@
 ;******************************************************************************************
 
 ;;PRUEBAS
-(scan&parse "global(x=1, y=2) (x+y)")
+(scan&parse "global(x=5, y=2) (x*y)")  ;; retorna 10
 (scan&parse "global(nombre=\"Victor\") nombre")
 (scan&parse "global(nombre=\"Victor\") set nombre=\"Sarah\"")
 
 ;;Definiciones
-(scan&parse "global() var x=1, y=2 in (x+y)")
+(scan&parse "global(x=5, y=2) var x=10, z=0 in (x*y)") ;; retorna 20
+(scan&parse "global() var x=1, y=2 in (x+y)") ;; retorna 3
 (scan&parse "global() const x=1, y=2 in (x+y)")
 (scan&parse "global() unic x=1, y=2 in (x+y)")
+(scan&parse "global() var x=1, y=2 in  sequence set x = 10; (x * y) end")
 
 ;;Datos
 (scan&parse "global() 0")
@@ -425,8 +450,6 @@
 (scan&parse "global() -1.5")
 (scan&parse "global() 'R'")
 (scan&parse "global() \"hola mundo 7\"")
-(scan&parse "global() length(\"hola\")")
-(scan&parse "global() concat(\"hola\" , \" mundo\")")
 (scan&parse "global() x8(1 5 7)")
 
 ;;Expresiones booleanas
